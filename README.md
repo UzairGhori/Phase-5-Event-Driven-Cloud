@@ -261,3 +261,5 @@ Phase-5/
 | CI/CD | GitHub Actions |
 | Monitoring | Prometheus, Grafana, OpenTelemetry |
 | Ingress | NGINX Ingress Controller + cert-manager |
+#   P h a s e - 5 - E v e n t - D r i v e n - C l o u d  
+ 
