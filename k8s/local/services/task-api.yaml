@@ -1,0 +1,80 @@
+# Task: T-D006 — Task API Deployment + Service
+# Spec: FR-042, FR-045
+# Plan: §5.1, §1.1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-api
+  namespace: todo-app
+  labels:
+    app: task-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task-api
+  template:
+    metadata:
+      labels:
+        app: task-api
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "task-api"
+        dapr.io/app-port: "8000"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-metrics: "true"
+        dapr.io/metrics-port: "9090"
+    spec:
+      containers:
+        - name: task-api
+          image: todo-app/task-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: connection-string
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secrets
+                  key: secret-key
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: SERVICE_NAME
+              value: "task-api"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-api
+  namespace: todo-app
+spec:
+  selector:
+    app: task-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP

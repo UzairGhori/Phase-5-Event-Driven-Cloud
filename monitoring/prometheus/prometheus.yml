@@ -1,0 +1,60 @@
+# Task: T-G005 — Prometheus scrape configuration
+# Plan: §7.1
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # Dapr sidecar metrics (all services) — 15s
+  - job_name: "dapr-sidecars"
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: [todo-app]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_dapr_io_enabled]
+        action: keep
+        regex: "true"
+      - source_labels: [__meta_kubernetes_pod_annotation_dapr_io_metrics_port]
+        action: replace
+        target_label: __address__
+        regex: (.+)
+        replacement: ${1}:9090
+
+  # Application /metrics endpoints — 15s
+  - job_name: "app-metrics"
+    kubernetes_sd_configs:
+      - role: service
+        namespaces:
+          names: [todo-app]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        regex: (task-api|chat-api|reminder-service|recurring-service|audit-service|ws-sync-service)
+        action: keep
+    metrics_path: /metrics
+
+  # Strimzi Kafka broker metrics — 30s (Plan §7.1)
+  - job_name: "strimzi-kafka"
+    scrape_interval: 30s
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: [kafka]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_strimzi_io_kind]
+        action: keep
+        regex: Kafka
+      - source_labels: [__meta_kubernetes_pod_ip]
+        action: replace
+        target_label: __address__
+        regex: (.+)
+        replacement: ${1}:9404
+
+  # PostgreSQL exporter — 30s (Plan §7.1, local only)
+  - job_name: "postgresql"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["postgres-exporter.todo-app.svc.cluster.local:9187"]

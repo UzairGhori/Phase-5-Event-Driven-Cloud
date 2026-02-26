@@ -1,0 +1,42 @@
+# Task: T-E002 — Production Reminder Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reminder-service
+  namespace: todo-app
+spec:
+  replicas: 1
+  strategy: { type: RollingUpdate, rollingUpdate: { maxSurge: 1, maxUnavailable: 0 } }
+  selector:
+    matchLabels:
+      app: reminder-service
+  template:
+    metadata:
+      labels:
+        app: reminder-service
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "reminder-service"
+        dapr.io/app-port: "8002"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-metrics: "true"
+        dapr.io/metrics-port: "9090"
+    spec:
+      containers:
+        - name: reminder-service
+          image: ghcr.io/todo-app/todo-reminder-service:IMAGE_TAG
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8002 }]
+          env:
+            - { name: DAPR_HTTP_PORT, value: "3500" }
+            - { name: TASK_API_APP_ID, value: "task-api" }
+          livenessProbe: { httpGet: { path: /api/health, port: 8002 }, initialDelaySeconds: 10, periodSeconds: 15 }
+          readinessProbe: { httpGet: { path: /api/ready, port: 8002 }, initialDelaySeconds: 5, periodSeconds: 10 }
+          resources: { requests: { memory: "128Mi", cpu: "100m" }, limits: { memory: "256Mi", cpu: "250m" } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: reminder-service, namespace: todo-app }
+spec:
+  selector: { app: reminder-service }
+  ports: [{ port: 8002, targetPort: 8002 }]

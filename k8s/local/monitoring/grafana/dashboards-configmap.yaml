@@ -1,0 +1,211 @@
+# Task: T-G006 — Grafana Dashboard JSON ConfigMap
+# Plan: §7.2 — 5 pre-provisioned dashboards
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+data:
+  service-overview.json: |
+    {
+      "dashboard": {
+        "title": "Service Overview",
+        "uid": "service-overview",
+        "panels": [
+          {
+            "title": "Request Rate",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+            "targets": [{ "expr": "sum(rate(http_requests_total[5m])) by (service)", "legendFormat": "{{service}}" }]
+          },
+          {
+            "title": "Error Rate (5xx)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+            "targets": [{ "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m])) by (service)", "legendFormat": "{{service}}" }]
+          },
+          {
+            "title": "P95 Latency",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+            "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))", "legendFormat": "{{service}}" }]
+          }
+        ],
+        "time": { "from": "now-1h", "to": "now" },
+        "schemaVersion": 39
+      }
+    }
+
+  kafka-overview.json: |
+    {
+      "dashboard": {
+        "title": "Kafka Overview",
+        "uid": "kafka-overview",
+        "panels": [
+          {
+            "title": "Consumer Lag by Group",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+            "targets": [{ "expr": "sum(kafka_consumergroup_lag) by (consumergroup, topic)", "legendFormat": "{{consumergroup}} / {{topic}}" }]
+          },
+          {
+            "title": "Messages In/sec by Topic",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+            "targets": [{ "expr": "sum(rate(kafka_server_brokertopicmetrics_messagesin_total[5m])) by (topic)", "legendFormat": "{{topic}}" }]
+          },
+          {
+            "title": "Bytes In/sec by Topic",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+            "targets": [{ "expr": "sum(rate(kafka_server_brokertopicmetrics_bytesin_total[5m])) by (topic)", "legendFormat": "{{topic}}" }]
+          },
+          {
+            "title": "Bytes Out/sec by Topic",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+            "targets": [{ "expr": "sum(rate(kafka_server_brokertopicmetrics_bytesout_total[5m])) by (topic)", "legendFormat": "{{topic}}" }]
+          }
+        ],
+        "time": { "from": "now-1h", "to": "now" },
+        "schemaVersion": 39
+      }
+    }
+
+  task-metrics.json: |
+    {
+      "dashboard": {
+        "title": "Task Metrics",
+        "uid": "task-metrics",
+        "panels": [
+          {
+            "title": "Tasks Created/min",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+            "targets": [{ "expr": "rate(tasks_created_total[5m]) * 60", "legendFormat": "{{service}}" }]
+          },
+          {
+            "title": "Tasks Completed/min",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+            "targets": [{ "expr": "rate(tasks_completed_total[5m]) * 60", "legendFormat": "{{service}}" }]
+          },
+          {
+            "title": "Active Tasks",
+            "type": "stat",
+            "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+            "targets": [{ "expr": "tasks_created_total - tasks_completed_total", "legendFormat": "Active" }]
+          },
+          {
+            "title": "Events Published/min",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+            "targets": [{ "expr": "rate(kafka_events_published_total[5m]) * 60", "legendFormat": "{{topic}}" }]
+          },
+          {
+            "title": "Event Consume Errors",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+            "targets": [{ "expr": "rate(kafka_events_failed_total[5m]) * 60", "legendFormat": "{{topic}}" }]
+          }
+        ],
+        "time": { "from": "now-1h", "to": "now" },
+        "schemaVersion": 39
+      }
+    }
+
+  infrastructure.json: |
+    {
+      "dashboard": {
+        "title": "Infrastructure",
+        "uid": "infrastructure",
+        "panels": [
+          {
+            "title": "CPU Usage by Pod",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+            "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"todo-app\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+          },
+          {
+            "title": "Memory Usage by Pod",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+            "targets": [{ "expr": "sum(container_memory_usage_bytes{namespace=\"todo-app\"}) by (pod)", "legendFormat": "{{pod}}" }]
+          },
+          {
+            "title": "Pod Restart Count",
+            "type": "stat",
+            "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+            "targets": [{ "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"todo-app\"}) by (pod)", "legendFormat": "{{pod}}" }]
+          },
+          {
+            "title": "Network Receive Bytes/sec",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+            "targets": [{ "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"todo-app\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+          },
+          {
+            "title": "Disk I/O by Pod",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+            "targets": [{ "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"todo-app\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+          }
+        ],
+        "time": { "from": "now-1h", "to": "now" },
+        "schemaVersion": 39
+      }
+    }
+
+  dapr.json: |
+    {
+      "dashboard": {
+        "title": "Dapr",
+        "uid": "dapr-overview",
+        "panels": [
+          {
+            "title": "Sidecar Health",
+            "type": "stat",
+            "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+            "targets": [{ "expr": "dapr_health", "legendFormat": "{{ app_id }}" }]
+          },
+          {
+            "title": "Service Invocation Rate",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+            "targets": [{ "expr": "sum(rate(dapr_http_server_request_count[5m])) by (app_id)", "legendFormat": "{{ app_id }}" }]
+          },
+          {
+            "title": "Service Invocation Latency (P95)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+            "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(dapr_http_server_latency_bucket[5m])) by (le, app_id))", "legendFormat": "{{ app_id }}" }]
+          },
+          {
+            "title": "Pub/Sub Messages Published",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+            "targets": [{ "expr": "sum(rate(dapr_component_pubsub_ingress_count[5m])) by (topic)", "legendFormat": "{{ topic }}" }]
+          },
+          {
+            "title": "Pub/Sub Messages Delivered",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+            "targets": [{ "expr": "sum(rate(dapr_component_pubsub_egress_count[5m])) by (topic)", "legendFormat": "{{ topic }}" }]
+          },
+          {
+            "title": "Pub/Sub Delivery Errors",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+            "targets": [{ "expr": "sum(rate(dapr_component_pubsub_egress_count{success=\"false\"}[5m])) by (topic)", "legendFormat": "{{ topic }}" }]
+          },
+          {
+            "title": "State Store Operations",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+            "targets": [{ "expr": "sum(rate(dapr_component_state_count[5m])) by (app_id, operation)", "legendFormat": "{{ app_id }} / {{ operation }}" }]
+          }
+        ],
+        "time": { "from": "now-1h", "to": "now" },
+        "schemaVersion": 39
+      }
+    }

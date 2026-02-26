@@ -1,0 +1,28 @@
+# Task: T-C001 — Dapr Pub/Sub Kafka component (local Strimzi)
+# Spec: §9.1, FR-040
+# Plan: §4.1
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub-kafka
+  namespace: todo-app
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    - name: brokers
+      value: "strimzi-kafka-bootstrap.kafka.svc.cluster.local:9092"
+    - name: authType
+      value: "none"
+    - name: initialOffset
+      value: "oldest"
+    - name: maxMessageBytes
+      value: "1048576"
+    - name: consumeRetryInterval
+      value: "1000ms"
+scopes:
+  - task-api
+  - reminder-service
+  - recurring-service
+  - audit-service
+  - ws-sync-service

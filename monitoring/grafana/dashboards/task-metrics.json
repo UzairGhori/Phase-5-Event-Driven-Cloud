@@ -1,0 +1,40 @@
+{
+  "dashboard": {
+    "title": "Task Metrics",
+    "uid": "task-metrics",
+    "panels": [
+      {
+        "title": "Tasks Created/min",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+        "targets": [{ "expr": "rate(tasks_created_total[5m]) * 60", "legendFormat": "{{service}}" }]
+      },
+      {
+        "title": "Tasks Completed/min",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+        "targets": [{ "expr": "rate(tasks_completed_total[5m]) * 60", "legendFormat": "{{service}}" }]
+      },
+      {
+        "title": "Active Tasks (Created - Completed)",
+        "type": "stat",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+        "targets": [{ "expr": "tasks_created_total - tasks_completed_total", "legendFormat": "Active" }]
+      },
+      {
+        "title": "Events Published/min",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "targets": [{ "expr": "rate(events_published_total[5m]) * 60", "legendFormat": "{{topic}}" }]
+      },
+      {
+        "title": "Event Publish Errors",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "targets": [{ "expr": "rate(events_publish_errors_total[5m]) * 60", "legendFormat": "{{topic}}" }]
+      }
+    ],
+    "time": { "from": "now-1h", "to": "now" },
+    "schemaVersion": 39
+  }
+}

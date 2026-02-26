@@ -1,0 +1,43 @@
+# Task: T-E002 — Production WS Sync Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ws-sync-service
+  namespace: todo-app
+spec:
+  replicas: 1
+  strategy: { type: RollingUpdate, rollingUpdate: { maxSurge: 1, maxUnavailable: 0 } }
+  selector:
+    matchLabels:
+      app: ws-sync-service
+  template:
+    metadata:
+      labels:
+        app: ws-sync-service
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "ws-sync-service"
+        dapr.io/app-port: "8005"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-metrics: "true"
+        dapr.io/metrics-port: "9090"
+    spec:
+      containers:
+        - name: ws-sync-service
+          image: ghcr.io/todo-app/todo-ws-sync-service:IMAGE_TAG
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8005 }]
+          env:
+            - name: SECRET_KEY
+              valueFrom: { secretKeyRef: { name: jwt-secrets, key: secret-key } }
+            - { name: DAPR_HTTP_PORT, value: "3500" }
+          livenessProbe: { httpGet: { path: /api/health, port: 8005 }, initialDelaySeconds: 10, periodSeconds: 15 }
+          readinessProbe: { httpGet: { path: /api/ready, port: 8005 }, initialDelaySeconds: 5, periodSeconds: 10 }
+          resources: { requests: { memory: "128Mi", cpu: "100m" }, limits: { memory: "256Mi", cpu: "250m" } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: ws-sync-service, namespace: todo-app }
+spec:
+  selector: { app: ws-sync-service }
+  ports: [{ port: 8005, targetPort: 8005 }]

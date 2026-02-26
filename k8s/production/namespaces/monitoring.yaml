@@ -1,0 +1,8 @@
+# Task: T-E001 — Production monitoring namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/part-of: todo-app
+    environment: production

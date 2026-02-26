@@ -1,0 +1,28 @@
+{
+  "dashboard": {
+    "title": "Service Overview",
+    "uid": "service-overview",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+        "targets": [{ "expr": "sum(rate(http_requests_total[5m])) by (service)", "legendFormat": "{{service}}" }]
+      },
+      {
+        "title": "Error Rate (5xx)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+        "targets": [{ "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m])) by (service)", "legendFormat": "{{service}}" }]
+      },
+      {
+        "title": "P95 Latency",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+        "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))", "legendFormat": "{{service}}" }]
+      }
+    ],
+    "time": { "from": "now-1h", "to": "now" },
+    "schemaVersion": 39
+  }
+}

@@ -1,0 +1,80 @@
+# Task: T-D006 — Chat API Deployment + Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-api
+  namespace: todo-app
+  labels:
+    app: chat-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-api
+  template:
+    metadata:
+      labels:
+        app: chat-api
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "chat-api"
+        dapr.io/app-port: "8001"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-metrics: "true"
+        dapr.io/metrics-port: "9090"
+    spec:
+      containers:
+        - name: chat-api
+          image: todo-app/chat-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8001
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secrets
+                  key: secret-key
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-secrets
+                  key: api-key
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: SERVICE_NAME
+              value: "chat-api"
+            - name: TASK_API_APP_ID
+              value: "task-api"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-api
+  namespace: todo-app
+spec:
+  selector:
+    app: chat-api
+  ports:
+    - port: 8001
+      targetPort: 8001
+  type: ClusterIP

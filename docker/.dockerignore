@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+*.md
+.env*
+tests/
+docs/
+.specify/
+history/
+specs/
+node_modules/
+.next/
+.vscode/

@@ -1,0 +1,7 @@
+# Task: T-D002 — Namespace for application services
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: todo-app
+  labels:
+    app.kubernetes.io/part-of: todo-app

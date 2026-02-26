@@ -1,0 +1,114 @@
+# Task: T-E006 — Network Policies (default deny + allow rules)
+# Spec: NFR-024
+
+# Default deny all ingress in todo-app namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: todo-app
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Allow ingress to task-api from frontend, chat-api, and Dapr sidecars
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-task-api-ingress
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: task-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+        - podSelector:
+            matchLabels:
+              app: chat-api
+        - podSelector:
+            matchLabels:
+              app: reminder-service
+        - podSelector:
+            matchLabels:
+              app: recurring-service
+      ports:
+        - port: 8000
+    # Allow Dapr sidecar communication
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 3500
+        - port: 9090
+---
+# Allow ingress to chat-api from frontend and ingress controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-chat-api-ingress
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: chat-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - port: 8001
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 3500
+        - port: 9090
+---
+# Allow ingress to frontend from ingress controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-ingress
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 3000
+---
+# Allow ingress to event-driven services from Dapr sidecars only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-event-services-ingress
+  namespace: todo-app
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - reminder-service
+          - recurring-service
+          - audit-service
+          - ws-sync-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 3500
+        - port: 9090

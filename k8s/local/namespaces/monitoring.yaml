@@ -1,0 +1,7 @@
+# Task: T-D002 — Namespace for monitoring stack
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/part-of: todo-app

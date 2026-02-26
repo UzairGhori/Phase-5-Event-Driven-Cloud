@@ -1,0 +1,55 @@
+# Task: T-D008 — Kustomization for local Minikube deployment
+# Spec: §12 US7
+# Plan: §5.1
+# Usage: kubectl apply -k k8s/local/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # 1. Namespaces
+  - namespaces/todo-app.yaml
+  - namespaces/kafka.yaml
+  - namespaces/monitoring.yaml
+
+  # 2. Secrets
+  - secrets/db-secrets.yaml
+  - secrets/jwt-secrets.yaml
+  - secrets/openai-secrets.yaml
+
+  # 3. Infrastructure
+  - infrastructure/postgresql/pvc.yaml
+  - infrastructure/postgresql/configmap.yaml
+  - infrastructure/postgresql/deployment.yaml
+  - infrastructure/postgresql/service.yaml
+  - infrastructure/strimzi/kafka-cluster.yaml
+  - infrastructure/strimzi/kafka-topics.yaml
+
+  # 4. Dapr Components
+  - ../../dapr/components/pubsub-kafka-local.yaml
+  - ../../dapr/components/statestore-postgresql.yaml
+  - ../../dapr/components/secrets-kubernetes.yaml
+  - ../../dapr/components/subscriptions.yaml
+
+  # 5. Application Services
+  - services/task-api.yaml
+  - services/chat-api.yaml
+  - services/reminder-service.yaml
+  - services/recurring-service.yaml
+  - services/audit-service.yaml
+  - services/ws-sync-service.yaml
+  - services/frontend.yaml
+
+  # 6. Networking
+  - networking/ingress.yaml
+
+  # 7. Monitoring
+  - monitoring/prometheus/configmap.yaml
+  - monitoring/prometheus/deployment.yaml
+  - monitoring/prometheus/service.yaml
+  - monitoring/grafana/configmap.yaml
+  - monitoring/grafana/dashboards-configmap.yaml
+  - monitoring/grafana/deployment.yaml
+  - monitoring/grafana/service.yaml
+  - monitoring/otel-collector/configmap.yaml
+  - monitoring/otel-collector/deployment.yaml
+  - monitoring/otel-collector/service.yaml

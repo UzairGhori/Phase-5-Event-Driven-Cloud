@@ -1,0 +1,11 @@
+# Task: T-E004 — PDB for Task API
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: task-api-pdb
+  namespace: todo-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: task-api

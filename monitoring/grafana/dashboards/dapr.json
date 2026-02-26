@@ -1,0 +1,59 @@
+{
+  "dashboard": {
+    "title": "Dapr",
+    "uid": "dapr-overview",
+    "panels": [
+      {
+        "title": "Sidecar Health",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+        "targets": [{ "expr": "dapr_health", "legendFormat": "{{ app_id }}" }],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              { "type": "value", "options": { "1": { "text": "Healthy", "color": "green" }, "0": { "text": "Unhealthy", "color": "red" } } }
+            ]
+          }
+        }
+      },
+      {
+        "title": "Service Invocation Rate",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+        "targets": [{ "expr": "sum(rate(dapr_http_server_request_count[5m])) by (app_id)", "legendFormat": "{{ app_id }}" }]
+      },
+      {
+        "title": "Service Invocation Latency (P95)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+        "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(dapr_http_server_latency_bucket[5m])) by (le, app_id))", "legendFormat": "{{ app_id }}" }]
+      },
+      {
+        "title": "Pub/Sub Messages Published",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "targets": [{ "expr": "sum(rate(dapr_component_pubsub_ingress_count[5m])) by (topic)", "legendFormat": "{{ topic }}" }]
+      },
+      {
+        "title": "Pub/Sub Messages Delivered",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "targets": [{ "expr": "sum(rate(dapr_component_pubsub_egress_count[5m])) by (topic)", "legendFormat": "{{ topic }}" }]
+      },
+      {
+        "title": "Pub/Sub Delivery Errors",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+        "targets": [{ "expr": "sum(rate(dapr_component_pubsub_egress_count{success=\"false\"}[5m])) by (topic)", "legendFormat": "{{ topic }}" }]
+      },
+      {
+        "title": "State Store Operations",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+        "targets": [{ "expr": "sum(rate(dapr_component_state_count[5m])) by (app_id, operation)", "legendFormat": "{{ app_id }} / {{ operation }}" }]
+      }
+    ],
+    "time": { "from": "now-1h", "to": "now" },
+    "schemaVersion": 39
+  }
+}

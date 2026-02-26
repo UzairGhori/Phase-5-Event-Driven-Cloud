@@ -1,0 +1,11 @@
+# Task: T-D003 — PostgreSQL init script
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init
+  namespace: todo-app
+data:
+  init.sql: |
+    CREATE DATABASE todo_app;
+    \c todo_app;
+    -- Tables are created by Alembic migration or SQLModel create_all

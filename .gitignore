@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+
+# Node.js / TypeScript
+node_modules/
+.next/
+out/
+dist/
+
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Testing / Coverage
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
+*.log*
+
+# Kubernetes secrets (actual values)
+k8s/local/secrets/*.yaml
+k8s/production/secrets/*.yaml
+!k8s/local/secrets/*.example.yaml
+!k8s/production/secrets/*.example.yaml
+
+# Temporary
+*.tmp

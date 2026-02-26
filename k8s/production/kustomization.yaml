@@ -1,0 +1,43 @@
+# Task: T-E007 — Production Kustomization
+# Spec: §17.2
+# Plan: §5.2
+# Usage: kubectl apply -k k8s/production/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # 1. Namespaces
+  - namespaces/todo-app.yaml
+  - namespaces/monitoring.yaml
+
+  # 2. Dapr Components (production)
+  - ../../dapr/components/pubsub-kafka-production.yaml
+  - ../../dapr/components/statestore-postgresql.yaml
+  - ../../dapr/components/secrets-azure-keyvault.yaml
+  - ../../dapr/components/subscriptions.yaml
+
+  # 3. Application Services
+  - services/task-api.yaml
+  - services/chat-api.yaml
+  - services/reminder-service.yaml
+  - services/recurring-service.yaml
+  - services/audit-service.yaml
+  - services/ws-sync-service.yaml
+  - services/frontend.yaml
+
+  # 4. Autoscaling
+  - autoscaling/task-api-hpa.yaml
+  - autoscaling/chat-api-hpa.yaml
+  - autoscaling/frontend-hpa.yaml
+  - autoscaling/ws-sync-hpa.yaml
+
+  # 5. Pod Disruption Budgets
+  - disruption/task-api-pdb.yaml
+  - disruption/frontend-pdb.yaml
+  - disruption/ws-sync-pdb.yaml
+
+  # 6. Networking
+  - networking/ingress.yaml
+  - networking/cert-manager/cluster-issuer.yaml
+  - networking/cert-manager/certificate.yaml
+  - networking/network-policies.yaml

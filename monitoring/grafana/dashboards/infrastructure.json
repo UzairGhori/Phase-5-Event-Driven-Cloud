@@ -1,0 +1,40 @@
+{
+  "dashboard": {
+    "title": "Infrastructure",
+    "uid": "infrastructure",
+    "panels": [
+      {
+        "title": "CPU Usage by Pod",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"todo-app\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+      },
+      {
+        "title": "Memory Usage by Pod",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [{ "expr": "sum(container_memory_usage_bytes{namespace=\"todo-app\"}) by (pod)", "legendFormat": "{{pod}}" }]
+      },
+      {
+        "title": "Pod Restart Count",
+        "type": "stat",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+        "targets": [{ "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"todo-app\"}) by (pod)", "legendFormat": "{{pod}}" }]
+      },
+      {
+        "title": "Network Receive Bytes/sec",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+        "targets": [{ "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"todo-app\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+      },
+      {
+        "title": "Disk I/O by Pod",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+        "targets": [{ "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"todo-app\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+      }
+    ],
+    "time": { "from": "now-1h", "to": "now" },
+    "schemaVersion": 39
+  }
+}

@@ -1,0 +1,80 @@
+# Task: T-E002 — Production Task API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-api
+  namespace: todo-app
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: task-api
+  template:
+    metadata:
+      labels:
+        app: task-api
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "task-api"
+        dapr.io/app-port: "8000"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-metrics: "true"
+        dapr.io/metrics-port: "9090"
+    spec:
+      containers:
+        - name: task-api
+          image: ghcr.io/todo-app/todo-task-api:IMAGE_TAG
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: connection-string
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secrets
+                  key: secret-key
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+            - name: SERVICE_NAME
+              value: "task-api"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-api
+  namespace: todo-app
+spec:
+  selector:
+    app: task-api
+  ports:
+    - port: 8000
+      targetPort: 8000
