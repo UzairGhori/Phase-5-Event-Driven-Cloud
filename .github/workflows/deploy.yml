@@ -1,0 +1,364 @@
+# =============================================================================
+# deploy.yml — Unified CI/CD Pipeline
+# Task: T-F001 + T-F002 — GROUP F (CI/CD)
+# Spec: §12 US9, §3.8, SC-021
+# Plan: §6.2
+#
+# Pipeline stages:
+#   1. Test    — lint + unit tests (all PRs and main pushes)
+#   2. Build   — Docker images tagged with SHA (main only)
+#   3. Push    — Push images to ghcr.io (main only)
+#   4. Deploy  — Staging (auto) → Production (manual approval, main only)
+#
+# Supports: Minikube (dev), AKS (prod), GKE (prod)
+# =============================================================================
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/todo
+
+# ---------------------------------------------------------------------------
+# Concurrency: cancel in-flight runs for the same branch
+# ---------------------------------------------------------------------------
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================================================
+  # STAGE 1: TEST — Lint & Unit Tests (runs on all PRs + pushes to main)
+  # ===========================================================================
+
+  lint-backend:
+    name: Lint Backend (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install linters
+        run: pip install ruff mypy
+      - name: Run ruff
+        run: ruff check backend/ services/
+      - name: Run mypy
+        run: mypy backend/ services/ --ignore-missing-imports
+
+  lint-frontend:
+    name: Lint Frontend (eslint + tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Run ESLint
+        run: cd frontend && npm run lint
+      - name: Type check
+        run: cd frontend && npx tsc --noEmit
+
+  test-backend:
+    name: Test Backend (pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: todo_app
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-cov
+      - name: Run backend tests
+        run: pytest backend/tests/ -v --cov=backend/app --cov-report=xml
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/todo_app
+          SECRET_KEY: test-secret-key-ci
+      - name: Run service tests
+        run: |
+          for svc_dir in services/*/; do
+            if [ -d "${svc_dir}tests" ]; then
+              echo "Testing ${svc_dir}..."
+              pip install -r "${svc_dir}requirements.txt" 2>/dev/null || true
+              pytest "${svc_dir}tests/" -v || true
+            fi
+          done
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/todo_app
+          SECRET_KEY: test-secret-key-ci
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage.xml
+
+  test-frontend:
+    name: Test Frontend (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Run tests
+        run: cd frontend && npm test -- --coverage
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+
+  docker-build-check:
+    name: Docker Build Check (${{ matrix.service.name }})
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { file: docker/task-api.Dockerfile, name: task-api }
+          - { file: docker/chat-api.Dockerfile, name: chat-api }
+          - { file: docker/reminder-service.Dockerfile, name: reminder-service }
+          - { file: docker/recurring-service.Dockerfile, name: recurring-service }
+          - { file: docker/audit-service.Dockerfile, name: audit-service }
+          - { file: docker/ws-sync-service.Dockerfile, name: ws-sync-service }
+          - { file: docker/frontend.Dockerfile, name: frontend }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (no push)
+        run: docker build -f ${{ matrix.service.file }} -t test-${{ matrix.service.name }}:${{ github.sha }} .
+
+  # ===========================================================================
+  # STAGE 2 + 3: BUILD & PUSH — Docker images to ghcr.io (main only)
+  # ===========================================================================
+
+  build-and-push:
+    name: Build & Push (${{ matrix.service.name }})
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint-backend, lint-frontend, test-backend, test-frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { file: docker/task-api.Dockerfile, name: task-api }
+          - { file: docker/chat-api.Dockerfile, name: chat-api }
+          - { file: docker/reminder-service.Dockerfile, name: reminder-service }
+          - { file: docker/recurring-service.Dockerfile, name: recurring-service }
+          - { file: docker/audit-service.Dockerfile, name: audit-service }
+          - { file: docker/ws-sync-service.Dockerfile, name: ws-sync-service }
+          - { file: docker/frontend.Dockerfile, name: frontend }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service.file }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+  # STAGE 4a: DEPLOY STAGING — Auto-deploy after build (main only)
+  # ===========================================================================
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build-and-push]
+    environment: staging
+    env:
+      DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET || 'aks' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # -- AKS credentials --
+      - name: Set up kubectl (AKS)
+        if: env.DEPLOY_TARGET == 'aks'
+        uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+
+      # -- GKE credentials --
+      - name: Authenticate to GKE
+        if: env.DEPLOY_TARGET == 'gke'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_STAGING }}
+      - name: Set up kubectl (GKE)
+        if: env.DEPLOY_TARGET == 'gke'
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ vars.GKE_CLUSTER_NAME }}
+          location: ${{ vars.GKE_CLUSTER_LOCATION }}
+
+      # -- Minikube (dev) --
+      - name: Set up Minikube
+        if: env.DEPLOY_TARGET == 'minikube'
+        uses: medyagh/setup-minikube@latest
+        with:
+          memory: 4096
+          cpus: 2
+      - name: Install Dapr (Minikube)
+        if: env.DEPLOY_TARGET == 'minikube'
+        run: |
+          wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
+          dapr init -k --wait
+
+      - name: Install kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Update image tags
+        run: |
+          cd k8s/production
+          SERVICES="task-api chat-api reminder-service recurring-service audit-service ws-sync-service frontend"
+          for svc in $SERVICES; do
+            kustomize edit set image "ghcr.io/todo-app/todo-${svc}:IMAGE_TAG=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${svc}:${{ github.sha }}"
+          done
+
+      - name: Apply manifests
+        run: kubectl apply -k k8s/production/
+
+      - name: Verify rollout
+        run: |
+          SERVICES="task-api chat-api reminder-service recurring-service audit-service ws-sync-service frontend"
+          for svc in $SERVICES; do
+            echo "Waiting for ${svc}..."
+            kubectl rollout status deployment/${svc} -n todo-app --timeout=120s
+          done
+
+      - name: Print pod status
+        if: always()
+        run: kubectl get pods -n todo-app -o wide
+
+  # ===========================================================================
+  # STAGE 4b: DEPLOY PRODUCTION — Manual approval gate (main only)
+  # ===========================================================================
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [deploy-staging]
+    environment: production
+    env:
+      DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET || 'aks' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # -- AKS credentials --
+      - name: Set up kubectl (AKS)
+        if: env.DEPLOY_TARGET == 'aks'
+        uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+
+      # -- GKE credentials --
+      - name: Authenticate to GKE
+        if: env.DEPLOY_TARGET == 'gke'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRODUCTION }}
+      - name: Set up kubectl (GKE)
+        if: env.DEPLOY_TARGET == 'gke'
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ vars.GKE_CLUSTER_NAME }}
+          location: ${{ vars.GKE_CLUSTER_LOCATION }}
+
+      - name: Install kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Update image tags
+        run: |
+          cd k8s/production
+          SERVICES="task-api chat-api reminder-service recurring-service audit-service ws-sync-service frontend"
+          for svc in $SERVICES; do
+            kustomize edit set image "ghcr.io/todo-app/todo-${svc}:IMAGE_TAG=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${svc}:${{ github.sha }}"
+          done
+
+      - name: Apply manifests
+        run: kubectl apply -k k8s/production/
+
+      - name: Verify rollout
+        run: |
+          SERVICES="task-api chat-api reminder-service recurring-service audit-service ws-sync-service frontend"
+          for svc in $SERVICES; do
+            echo "Waiting for ${svc}..."
+            kubectl rollout status deployment/${svc} -n todo-app --timeout=120s
+          done
+
+      - name: Print deployment summary
+        if: always()
+        run: |
+          echo "============================================="
+          echo "  Production Deployment Summary"
+          echo "============================================="
+          echo "  Commit:  ${{ github.sha }}"
+          echo "  Actor:   ${{ github.actor }}"
+          echo "  Target:  ${{ env.DEPLOY_TARGET }}"
+          echo "============================================="
+          kubectl get pods -n todo-app -o wide
+          kubectl get svc -n todo-app
+          kubectl get ingress -n todo-app

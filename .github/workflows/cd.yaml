@@ -1,0 +1,88 @@
+# Task: T-F002 — CD workflow (build + push + deploy)
+# Spec: §12 US9, SC-021
+# Plan: §6.2
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/todo
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service:
+          - { file: docker/task-api.Dockerfile, name: task-api }
+          - { file: docker/chat-api.Dockerfile, name: chat-api }
+          - { file: docker/reminder-service.Dockerfile, name: reminder-service }
+          - { file: docker/recurring-service.Dockerfile, name: recurring-service }
+          - { file: docker/audit-service.Dockerfile, name: audit-service }
+          - { file: docker/ws-sync-service.Dockerfile, name: ws-sync-service }
+          - { file: docker/frontend.Dockerfile, name: frontend }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.service.file }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:${{ github.sha }}
+
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v3
+      - uses: azure/k8s-set-context@v3
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+      - name: Update image tags
+        run: |
+          cd k8s/production
+          for svc in task-api chat-api reminder-service recurring-service audit-service ws-sync-service frontend; do
+            kustomize edit set image ghcr.io/todo-app/todo-${svc}:IMAGE_TAG=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${svc}:${{ github.sha }}
+          done
+      - run: kubectl apply -k k8s/production/
+      - name: Verify rollout
+        run: |
+          for svc in task-api chat-api reminder-service recurring-service audit-service ws-sync-service frontend; do
+            kubectl rollout status deployment/${svc} -n todo-app --timeout=120s
+          done
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v3
+      - uses: azure/k8s-set-context@v3
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+      - name: Update image tags
+        run: |
+          cd k8s/production
+          for svc in task-api chat-api reminder-service recurring-service audit-service ws-sync-service frontend; do
+            kustomize edit set image ghcr.io/todo-app/todo-${svc}:IMAGE_TAG=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${svc}:${{ github.sha }}
+          done
+      - run: kubectl apply -k k8s/production/
+      - name: Verify rollout
+        run: |
+          for svc in task-api chat-api reminder-service recurring-service audit-service ws-sync-service frontend; do
+            kubectl rollout status deployment/${svc} -n todo-app --timeout=120s
+          done
