@@ -21,7 +21,7 @@
 
 ---
 
-#### T-A001: Extend Task model with due_date, recurrence, and reminder fields
+#### T-A001: ~~Extend Task model with due_date, recurrence, and reminder fields~~ [X] DONE
 
 **Description**: Add new columns to the Task SQLModel entity: `due_date`, `recurrence_pattern`, `recurrence_interval`, `recurrence_ends_at`, `source_task_id`, `reminder_at`, `reminder_sent`. Add `critical` to priority enum. Add computed `is_overdue` property (query-time, not stored).
 
@@ -41,7 +41,7 @@
 
 ---
 
-#### T-A002: Create Tag and TaskTag SQLModel entities
+#### T-A002: ~~Create Tag and TaskTag SQLModel entities~~ [X] DONE
 
 **Description**: Create `Tag` model (id, name, slug, color, user_id, created_at) and `TaskTag` junction model (task_id, tag_id). Add unique constraint on `(slug, user_id)`.
 
@@ -61,7 +61,7 @@
 
 ---
 
-#### T-A003: Create AuditLog SQLModel entity
+#### T-A003: ~~Create AuditLog SQLModel entity~~ [X] DONE
 
 **Description**: Create `AuditLog` model (id, event_type, event_data as JSON, user_id, correlation_id, created_at).
 
@@ -80,7 +80,7 @@
 
 ---
 
-#### T-A004: Create Alembic migration for all new models
+#### T-A004: ~~Create Alembic migration for all new models~~ [X] DONE
 
 **Description**: Generate and verify an Alembic migration that adds: new Task columns, Tag table, TaskTag table, AuditLog table, search_vector tsvector column with GIN index, and all indexes from spec §10.6. Add tsvector trigger to auto-update search_vector on title/description change.
 
@@ -105,7 +105,7 @@
 
 ---
 
-#### T-A005: Implement Tag CRUD router
+#### T-A005: ~~Implement Tag CRUD router~~ [X] DONE
 
 **Description**: Create `backend/app/routers/tags.py` with: `GET /api/tags` (list with task_count), `POST /api/tags` (create with slug auto-gen), `PATCH /api/tags/{tag_id}` (rename/recolor), `DELETE /api/tags/{tag_id}` (cascade delete associations). All endpoints require JWT auth, scoped to user. Enforce max 50 tags per user on create.
 
@@ -127,7 +127,7 @@
 
 ---
 
-#### T-A006: Implement task-tag association endpoints
+#### T-A006: ~~Implement task-tag association endpoints~~ [X] DONE
 
 **Description**: Create `POST /api/tasks/{task_id}/tags` (add tags to task) and `DELETE /api/tasks/{task_id}/tags/{tag_id}` (remove tag from task). Enforce max 10 tags per task.
 
@@ -151,7 +151,7 @@
 
 ---
 
-#### T-A007: Extend Task CRUD for due_date and reminder_at fields
+#### T-A007: ~~Extend Task CRUD for due_date and reminder_at fields~~ [X] DONE
 
 **Description**: Update `POST /api/tasks` and `PUT/PATCH /api/tasks/{task_id}` to accept `due_date`, `reminder_at`, `recurrence_pattern`, `recurrence_interval`, `recurrence_ends_at`, and `tag_ids`. Add validation: due_date must be in future, reminder_at must be before due_date, reminder_at requires due_date.
 
@@ -171,7 +171,7 @@
 
 ---
 
-#### T-A008: Implement overdue tasks endpoint and filter
+#### T-A008: ~~Implement overdue tasks endpoint and filter~~ [X] DONE
 
 **Description**: Create `GET /api/tasks/overdue` that returns tasks where `due_date < now() AND status != completed`. Also add `overdue=true` query parameter support to `GET /api/tasks`.
 
@@ -194,7 +194,7 @@
 
 ---
 
-#### T-A009: Implement full-text search with tsvector
+#### T-A009: ~~Implement full-text search with tsvector~~ [X] DONE
 
 **Description**: Add `search` query parameter to `GET /api/tasks`. Use PostgreSQL `to_tsquery('english', ...)` against `search_vector` column. Search matches on title and description with English stemming.
 
@@ -215,7 +215,7 @@
 
 ---
 
-#### T-A010: Implement multi-criteria filtering
+#### T-A010: ~~Implement multi-criteria filtering~~ [X] DONE
 
 **Description**: Add filter query parameters to `GET /api/tasks`: `status`, `priority`, `tag` (repeatable), `due_before`, `due_after`, `overdue`. All filters are combinable (AND logic).
 
@@ -235,7 +235,7 @@
 
 ---
 
-#### T-A011: Implement multi-field sorting
+#### T-A011: ~~Implement multi-field sorting~~ [X] DONE
 
 **Description**: Add `sort_by` and `sort_order` query parameters to `GET /api/tasks`. Support sort fields: `created_at`, `due_date`, `priority`, `title`. Priority sort uses ordinal: critical > high > medium > low. Tasks with null due_date sort last when sorting by due_date.
 
@@ -255,7 +255,7 @@
 
 ---
 
-#### T-A012: Implement pagination
+#### T-A012: ~~Implement pagination~~ [X] DONE
 
 **Description**: Add `page` and `page_size` query parameters to `GET /api/tasks`. Return paginated response with `items`, `total`, `page`, `page_size`, `total_pages`.
 
@@ -279,7 +279,7 @@
 
 ---
 
-#### T-A013: Create Recurring Task Service scaffold
+#### T-A013: ~~Create Recurring Task Service scaffold~~ [X] DONE
 
 **Description**: Create `services/recurring/` directory with FastAPI app, config, health router, middleware (correlation, logging, metrics). The service is event-driven only — no external API.
 
@@ -305,7 +305,7 @@
 
 ---
 
-#### T-A014: Implement recurrence date computation logic
+#### T-A014: ~~Implement recurrence date computation logic~~ [X] DONE
 
 **Description**: Create `services/recurring/app/recurrence.py` with pure function `compute_next_due_date(current_due_date, pattern, interval, ends_at)`. Supports daily, weekly, monthly patterns with configurable interval. Returns None if next date exceeds ends_at.
 
@@ -326,7 +326,7 @@
 
 ---
 
-#### T-A015: Implement task.completed event handler in Recurring Service
+#### T-A015: ~~Implement task.completed event handler in Recurring Service~~ [X] DONE
 
 **Description**: Create `services/recurring/app/handlers/task_completed.py`. On receiving a `task.completed` event with recurrence fields, compute next due date, then call Task API via Dapr Service Invocation to create the next instance with `source_task_id` set.
 
@@ -354,7 +354,7 @@
 
 ---
 
-#### T-A016: Create Reminder Service scaffold
+#### T-A016: ~~Create Reminder Service scaffold~~ [X] DONE
 
 **Description**: Create `services/reminder/` directory with FastAPI app, config, health router, middleware.
 
@@ -379,7 +379,7 @@
 
 ---
 
-#### T-A017: Implement reminder.scheduled event handler
+#### T-A017: ~~Implement reminder.scheduled event handler~~ [X] DONE
 
 **Description**: Create `services/reminder/app/handlers/reminder_scheduled.py`. On receiving `todo.reminder.scheduled` event, schedule a one-time Dapr Job at the specified `reminder_at` time with job name `reminder-{task_id}`.
 
@@ -401,7 +401,7 @@
 
 ---
 
-#### T-A018: Implement task.deleted and task.updated handlers in Reminder Service
+#### T-A018: ~~Implement task.deleted and task.updated handlers in Reminder Service~~ [X] DONE
 
 **Description**: Create handlers for `todo.task.deleted` (cancel pending Dapr Job) and `todo.task.updated` (reschedule if reminder_at changed).
 
@@ -423,7 +423,7 @@
 
 ---
 
-#### T-A019: Implement Dapr Jobs callback (reminder triggered)
+#### T-A019: ~~Implement Dapr Jobs callback (reminder triggered)~~ [X] DONE
 
 **Description**: Create `services/reminder/app/jobs/reminder_triggered.py`. When Dapr fires the job callback, check task status via Service Invocation to Task API. If not completed, publish `todo.reminder.triggered` event. Task API then sets `reminder_sent=true`.
 
@@ -449,7 +449,7 @@
 
 ---
 
-#### T-A020: Create Audit Service scaffold
+#### T-A020: ~~Create Audit Service scaffold~~ [X] DONE
 
 **Description**: Create `services/audit/` directory with FastAPI app, config, health router, middleware, and AuditLog model.
 
@@ -475,7 +475,7 @@
 
 ---
 
-#### T-A021: Implement audit.log event handler
+#### T-A021: ~~Implement audit.log event handler~~ [X] DONE
 
 **Description**: Create `services/audit/app/handlers/audit_log.py`. Consumes `todo.audit.log` events and persists to AuditLog table.
 
@@ -495,7 +495,7 @@
 
 ---
 
-#### T-A022: Implement audit query endpoints
+#### T-A022: ~~Implement audit query endpoints~~ [X] DONE
 
 **Description**: Create `services/audit/app/routers/audit.py` with `GET /api/audit` (list user audit logs) and `GET /api/audit/{task_id}` (audit trail for specific task). Both require JWT auth, scoped to user.
 
@@ -519,7 +519,7 @@
 
 ---
 
-#### T-A023: Create WebSocket Sync Service scaffold
+#### T-A023: ~~Create WebSocket Sync Service scaffold~~ [X] DONE
 
 **Description**: Create `services/ws-sync/` directory with FastAPI app, config, health router, middleware, WebSocket connection manager.
 
@@ -549,7 +549,7 @@
 
 ---
 
-#### T-A024: Implement WebSocket event handlers
+#### T-A024: ~~Implement WebSocket event handlers~~ [X] DONE
 
 **Description**: Create event handlers that consume Kafka events and push to connected WebSocket clients. Handle: task.created, task.updated, task.completed, task.deleted, reminder.triggered.
 
@@ -574,7 +574,7 @@
 
 ---
 
-#### T-A025: Create Chat API Service scaffold
+#### T-A025: ~~Create Chat API Service scaffold~~ [X] DONE
 
 **Description**: Create `services/chat-api/` directory with FastAPI app, config, health router, middleware. Migrate Phase III chatbot code into this service.
 
@@ -602,7 +602,7 @@
 
 ---
 
-#### T-A026: Extend MCP tools for new features
+#### T-A026: ~~Extend MCP tools for new features~~ [X] DONE
 
 **Description**: Update MCP tools in Chat API to support new fields. Extend `add_task` (due_date, reminder_at, recurrence, tag_ids), `list_tasks` (search, filters, sort), `update_task` (due_date, reminder_at, tag_ids). Add new tools: `add_tag`, `list_tags`, `search_tasks`.
 
@@ -628,7 +628,7 @@
 
 ---
 
-#### T-A027: [P] Create Next.js Route Handlers (SSR Proxy)
+#### T-A027: ~~[P] Create Next.js Route Handlers (SSR Proxy)~~ [X] DONE
 
 **Description**: Create API route handlers in `frontend/src/app/api/` that proxy requests to backend services via Dapr Service Invocation. Routes: tasks/*, tags/*, chat/*, auth/*.
 
@@ -652,7 +652,7 @@
 
 ---
 
-#### T-A028: [P] Build tag management UI components
+#### T-A028: ~~[P] Build tag management UI components~~ [X] DONE
 
 **Description**: Create frontend components for tag management: tag list, create tag dialog, tag picker (for task form), tag badges (on task cards). Use Tailwind CSS.
 
@@ -675,7 +675,7 @@
 
 ---
 
-#### T-A029: [P] Build search, filter, and sort UI components
+#### T-A029: ~~[P] Build search, filter, and sort UI components~~ [X] DONE
 
 **Description**: Create filter bar, search input, sort dropdown, and pagination controls. Integrate with `GET /api/tasks` query parameters via Route Handlers.
 
@@ -698,7 +698,7 @@
 
 ---
 
-#### T-A030: Update task form for due date, reminder, and recurrence
+#### T-A030: ~~Update task form for due date, reminder, and recurrence~~ [X] DONE
 
 **Description**: Extend the task create/edit form to include: due date picker, reminder datetime picker, recurrence pattern selector (daily/weekly/monthly), recurrence interval input, recurrence end date.
 
@@ -718,7 +718,7 @@
 
 ---
 
-#### T-A031: [P] Integrate WebSocket client for real-time updates
+#### T-A031: ~~[P] Integrate WebSocket client for real-time updates~~ [X] DONE
 
 **Description**: Create WebSocket client in `frontend/src/lib/ws.ts` that connects to WS Sync Service. On receiving task events, update the local task list state without page refresh.
 
