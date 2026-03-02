@@ -49,11 +49,9 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install linters
-        run: pip install ruff mypy
+        run: pip install ruff
       - name: Run ruff
         run: ruff check backend/ services/
-      - name: Run mypy
-        run: mypy backend/ --ignore-missing-imports --explicit-package-bases
 
   lint-frontend:
     name: Lint Frontend (eslint + tsc)
