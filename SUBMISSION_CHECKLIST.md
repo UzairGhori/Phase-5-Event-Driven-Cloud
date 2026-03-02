@@ -48,14 +48,15 @@
 - [x] **Ingress with TLS** — NGINX + cert-manager (Let's Encrypt)
 - [x] **Network Policies** — Default deny + explicit allows per service
 - [x] **Kustomization** — `kubectl apply -k k8s/production/` deploys everything
-- [x] **Deploy script** — `scripts/deploy-aks.sh` (8-phase provisioning)
+- [x] **Deploy script (AKS)** — `scripts/deploy-aks.sh` (8-phase provisioning)
+- [x] **Deploy script (DO)** — `scripts/deploy-digitalocean.sh` (9-phase DOKS provisioning)
 
 ## 5. CI/CD Pipeline
 
 - [x] **CI workflow (PR gate)** — `.github/workflows/ci.yaml` (lint + test + Docker build check)
 - [x] **CD workflow** — `.github/workflows/cd.yaml` (build + push + staging auto + production manual)
 - [x] **Unified pipeline** — `.github/workflows/deploy.yml` (test → build → push → deploy)
-- [x] **Multi-target support** — AKS, GKE, Minikube via `DEPLOY_TARGET` env var
+- [x] **Multi-target support** — AKS, GKE, DigitalOcean, Minikube via `DEPLOY_TARGET` env var
 - [x] **Docker Buildx** — With GHA layer cache
 - [x] **Concurrency control** — Cancels in-flight runs for same branch
 - [x] **Coverage artifacts** — Backend (pytest-cov) + Frontend (vitest coverage)
@@ -95,7 +96,7 @@
 | Prometheus alert rules | 10 |
 | Grafana dashboards | 5 |
 | Custom Prometheus metrics | 10 |
-| Shell scripts | 5 |
+| Shell scripts | 6 |
 | Spec artifacts | 3 (spec, plan, tasks) |
 | PHR records | 15 |
 | **Total files** | **~130+** |
@@ -119,6 +120,7 @@
 ```bash
 # Validate all local manifests
 kubectl apply -k k8s/local/ --dry-run=client
+
 
 # Validate all production manifests
 kubectl apply -k k8s/production/ --dry-run=client

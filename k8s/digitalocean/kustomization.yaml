@@ -1,0 +1,39 @@
+# DigitalOcean Kubernetes (DOKS) Kustomization
+# Uses K8s secrets instead of Azure Key Vault
+# Usage: kubectl apply -k k8s/digitalocean/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # 1. Namespaces (reuse production)
+  - ../production/namespaces/todo-app.yaml
+  - ../production/namespaces/monitoring.yaml
+
+  # 2. Dapr Components (DO uses K8s secrets, not Azure KV)
+  - ../../dapr/components/pubsub-kafka-production.yaml
+  - ../../dapr/components/statestore-postgresql.yaml
+  - ../../dapr/components/secrets-kubernetes.yaml
+  - ../../dapr/components/subscriptions.yaml
+
+  # 3. Application Services
+  - ../production/services/task-api.yaml
+  - ../production/services/chat-api.yaml
+  - ../production/services/reminder-service.yaml
+  - ../production/services/recurring-service.yaml
+  - ../production/services/audit-service.yaml
+  - ../production/services/ws-sync-service.yaml
+  - ../production/services/frontend.yaml
+
+  # 4. Autoscaling
+  - ../production/autoscaling/task-api-hpa.yaml
+  - ../production/autoscaling/chat-api-hpa.yaml
+  - ../production/autoscaling/frontend-hpa.yaml
+  - ../production/autoscaling/ws-sync-hpa.yaml
+
+  # 5. Pod Disruption Budgets
+  - ../production/disruption/task-api-pdb.yaml
+  - ../production/disruption/frontend-pdb.yaml
+  - ../production/disruption/ws-sync-pdb.yaml
+
+  # 6. Networking (DO-specific ingress with DO LB annotations)
+  - networking/ingress.yaml

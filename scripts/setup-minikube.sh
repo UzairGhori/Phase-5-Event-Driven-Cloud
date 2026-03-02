@@ -10,7 +10,7 @@ echo "=== Phase V: Todo App — Minikube Setup ==="
 
 # 1. Start Minikube
 echo "[1/8] Starting Minikube..."
-minikube start --cpus=4 --memory=8192 --driver=docker --addons=ingress
+minikube start --cpus=2 --memory=3072 --driver=docker --addons=ingress
 
 # 2. Install Dapr
 echo "[2/8] Installing Dapr on Kubernetes..."
@@ -33,7 +33,7 @@ docker build -f docker/reminder-service.Dockerfile -t todo-app/reminder-service:
 docker build -f docker/recurring-service.Dockerfile -t todo-app/recurring-service:latest .
 docker build -f docker/audit-service.Dockerfile -t todo-app/audit-service:latest .
 docker build -f docker/ws-sync-service.Dockerfile -t todo-app/ws-sync-service:latest .
-# docker build -f docker/frontend.Dockerfile -t todo-app/frontend:latest .  # Uncomment when frontend is ready
+docker build -f docker/frontend.Dockerfile -t todo-app/frontend:latest .
 
 # 5. Apply namespaces and secrets
 echo "[5/8] Applying namespaces and secrets..."

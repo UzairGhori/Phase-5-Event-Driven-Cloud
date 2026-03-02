@@ -10,6 +10,7 @@
 | Dapr CLI | 1.14+ | Dapr runtime |
 | Helm | 3.14+ | Monitoring (optional) |
 | Azure CLI | 2.60+ | AKS deployment |
+| doctl | 1.100+ | DigitalOcean deployment |
 | Node.js | 22 LTS | Frontend |
 | Python | 3.12 | Backend services |
 
@@ -183,7 +184,93 @@ kubectl get hpa -n todo-app
 
 ---
 
-## Option 3: GKE Deployment
+## Option 3: DigitalOcean Deployment (DOKS)
+
+### Prerequisites
+
+```bash
+# Install doctl
+# https://docs.digitalocean.com/reference/doctl/how-to/install/
+
+# Authenticate
+doctl auth init
+
+# Verify
+doctl account get
+```
+
+### Required Secrets
+
+```bash
+export NEON_CONNECTION_STRING="postgresql://user:pass@host/dbname?sslmode=require"
+export JWT_SECRET_KEY="your-256-bit-secret-key"
+export OPENAI_API_KEY="sk-..."
+export REDPANDA_BROKERS="broker1.redpanda.com:9092"
+export REDPANDA_USERNAME="your-username"
+export REDPANDA_PASSWORD="your-password"
+```
+
+### Automated Deployment
+
+```bash
+# Default: nyc1, 2 nodes, s-2vcpu-4gb
+bash scripts/deploy-digitalocean.sh
+
+# Custom configuration
+CLUSTER_NAME=my-todo \
+REGION=sfo3 \
+NODE_COUNT=3 \
+NODE_SIZE=s-4vcpu-8gb \
+bash scripts/deploy-digitalocean.sh
+```
+
+### Script Phases
+
+| Phase | Action | Duration |
+|-------|--------|----------|
+| 1 | Create Container Registry (DOCR) | ~10s |
+| 2 | Build & Push Docker Images | ~5-10 min |
+| 3 | Create DOKS Cluster | ~5-8 min |
+| 4 | Integrate DOCR with DOKS | ~5s |
+| 5 | Install Dapr v1.14.4 | ~30s |
+| 6 | Install NGINX Ingress + DO LB | ~2 min |
+| 7 | Create Namespaces + Secrets | ~10s |
+| 8 | Apply DigitalOcean Manifests | ~30s |
+| 9 | Verify Rollout & Output URL | ~2 min |
+
+### Post-Deployment
+
+```bash
+# Get your Published App URL
+kubectl get svc -n ingress-nginx ingress-nginx-controller \
+  -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+# Verify all pods
+kubectl get pods -n todo-app
+
+# Verify Dapr
+dapr status -k
+```
+
+### Cost: FREE ($200 credit for 60 days)
+
+| Resource | Monthly Cost | With Credit |
+|----------|-------------|-------------|
+| DOKS Cluster (1x s-2vcpu-4gb) | ~$24 | $0 |
+| DO Load Balancer | ~$12 | $0 |
+| Container Registry (Starter) | Free | $0 |
+| **Total** | **~$36/month** | **$0 (covered by $200 credit)** |
+
+### Teardown
+
+```bash
+doctl kubernetes cluster delete todo-app-doks --force
+doctl registry delete todo-app-registry --force
+```
+
+---
+
+## Option 4: GKE Deployment
 
 ### Prerequisites
 
