@@ -10,9 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from app.agents.todo_agent import SYSTEM_PROMPT, handle_tool_call
+from app.agents.todo_agent import handle_tool_call
 from app.config import get_settings
-from app.mcp.tools import TOOLS
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -64,7 +63,6 @@ async def chat(
     tool_results = []
 
     if any(kw in message for kw in ["list task", "show task", "my task", "all task"]):
-        from app.mcp.schemas import ListTasksParams
         result = await handle_tool_call("list_tasks", {}, auth_header)
         tool_results.append({"tool": "list_tasks", "result": result})
 
@@ -79,7 +77,6 @@ async def chat(
             tool_results.append({"tool": "search_tasks", "result": result})
 
     elif any(kw in message for kw in ["overdue", "late", "past due"]):
-        from app.mcp.schemas import ListTasksParams
         result = await handle_tool_call("list_tasks", {"overdue": True}, auth_header)
         tool_results.append({"tool": "list_tasks", "result": result})
 
@@ -102,7 +99,6 @@ def _format_tool_results(results: list[dict]) -> str:
     """Format tool call results into a readable response."""
     parts = []
     for r in results:
-        tool = r["tool"]
         data = r["result"]
         if isinstance(data, dict) and "error" in data:
             parts.append(f"Error: {data['error']}")

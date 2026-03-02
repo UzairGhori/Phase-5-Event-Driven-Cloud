@@ -9,7 +9,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository_owner }}/todo
 
 jobs:
   build-and-push:
@@ -29,6 +28,8 @@ jobs:
           - { file: docker/frontend.Dockerfile, name: frontend }
     steps:
       - uses: actions/checkout@v4
+      - name: Set image prefix
+        run: echo "IMAGE_PREFIX=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/todo" >> $GITHUB_ENV
       - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -47,6 +48,8 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@v4
+      - name: Set image prefix
+        run: echo "IMAGE_PREFIX=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/todo" >> $GITHUB_ENV
       - uses: azure/setup-kubectl@v3
       - uses: azure/k8s-set-context@v3
         with:
@@ -70,6 +73,8 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+      - name: Set image prefix
+        run: echo "IMAGE_PREFIX=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/todo" >> $GITHUB_ENV
       - uses: azure/setup-kubectl@v3
       - uses: azure/k8s-set-context@v3
         with:

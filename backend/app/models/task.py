@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlmodel import Column, Field, SQLModel, String
+from sqlmodel import Field, SQLModel
 
 
 class PriorityEnum(str, enum.Enum):

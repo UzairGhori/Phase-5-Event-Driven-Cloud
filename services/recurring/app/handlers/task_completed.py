@@ -4,8 +4,6 @@
 
 import logging
 from datetime import datetime
-from typing import Any
-
 from fastapi import APIRouter, Request
 
 from app.config import get_settings

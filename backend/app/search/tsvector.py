@@ -4,7 +4,7 @@
 
 import re
 
-from sqlalchemy import func, text
+from sqlalchemy import text
 
 
 def build_tsquery(search_term: str) -> str:

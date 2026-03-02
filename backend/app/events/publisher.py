@@ -4,8 +4,6 @@
 
 import asyncio
 import logging
-from typing import Any
-
 import httpx
 
 from backend.app.config import get_settings

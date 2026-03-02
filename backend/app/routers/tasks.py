@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlmodel import Session, case, col, func, select, text
+from sqlmodel import Session, case, func, select
 
 from backend.app.database import get_session
 from backend.app.dependencies.auth import get_current_user
@@ -35,7 +35,7 @@ from backend.app.events.topics import (
 )
 from backend.app.middleware.correlation import get_correlation_id
 from backend.app.middleware.metrics import tasks_completed_total, tasks_created_total
-from backend.app.models.tag import Tag, TagResponse, TaskTag
+from backend.app.models.tag import Tag, TaskTag
 from backend.app.models.task import (
     PaginatedTaskResponse,
     PriorityEnum,
@@ -398,8 +398,6 @@ async def update_task(
     new_reminder = update_data.get("reminder_at", task.reminder_at)
     new_recurrence_ends = update_data.get("recurrence_ends_at", task.recurrence_ends_at)
     _validate_task_dates(new_due, new_reminder, new_recurrence_ends)
-
-    old_reminder_at = task.reminder_at
 
     for field, value in update_data.items():
         if field == "tag_ids":

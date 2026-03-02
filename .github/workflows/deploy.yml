@@ -26,7 +26,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository_owner }}/todo
 
 # ---------------------------------------------------------------------------
 # Concurrency: cancel in-flight runs for the same branch
@@ -137,13 +136,7 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
       - name: Run tests
-        run: cd frontend && npm test -- --coverage
-      - name: Upload coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage
-          path: frontend/coverage/
+        run: cd frontend && npm test
 
   docker-build-check:
     name: Docker Build Check (${{ matrix.service.name }})
@@ -187,6 +180,9 @@ jobs:
           - { file: docker/frontend.Dockerfile, name: frontend }
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set image prefix
+        run: echo "IMAGE_PREFIX=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/todo" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -232,6 +228,9 @@ jobs:
       DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET || 'aks' }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set image prefix
+        run: echo "IMAGE_PREFIX=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/todo" >> $GITHUB_ENV
 
       # -- AKS credentials --
       - name: Set up kubectl (AKS)
@@ -306,6 +305,9 @@ jobs:
       DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET || 'aks' }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set image prefix
+        run: echo "IMAGE_PREFIX=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/todo" >> $GITHUB_ENV
 
       # -- AKS credentials --
       - name: Set up kubectl (AKS)

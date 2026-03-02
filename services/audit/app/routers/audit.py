@@ -3,10 +3,8 @@
 # Plan: §2.5
 
 import logging
-from typing import Optional
-
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session, func, select
 

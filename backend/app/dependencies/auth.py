@@ -9,7 +9,7 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from backend.app.config import get_settings
 from backend.app.database import get_session

@@ -2,7 +2,6 @@
 # Spec: FR-046, FR-047
 # Plan: §2.2
 
-import json
 import logging
 from typing import Any
 

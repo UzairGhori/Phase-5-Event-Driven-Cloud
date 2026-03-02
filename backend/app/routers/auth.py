@@ -2,8 +2,8 @@
 # Spec: §11.1 (Auth Endpoints — unchanged)
 # Plan: §2.1 (Auth Endpoints)
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, Field
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from backend.app.database import get_session

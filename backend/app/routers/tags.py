@@ -3,7 +3,7 @@
 # Spec: §11.2 (New Endpoints: Tags), FR-033, FR-034, FR-048, FR-049
 # Plan: §2.1 (Tag Endpoints)
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, func, select
 
 from backend.app.database import get_session
