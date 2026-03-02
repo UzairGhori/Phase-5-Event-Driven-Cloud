@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Task, Tag, PaginatedTasks } from "@/types";
+import { Task, Tag, PaginatedTasks, TaskCreateInput } from "@/types";
 import SearchInput from "@/components/search/search-input";
 import FilterBar, { Filters } from "@/components/filters/filter-bar";
 import SortControls from "@/components/filters/sort-controls";
@@ -75,7 +75,7 @@ export default function DashboardPage() {
     return () => ws.close();
   }, [fetchTasks]);
 
-  const createTask = async (data: Record<string, unknown>) => {
+  const createTask = async (data: TaskCreateInput) => {
     await fetch("/api/tasks", { method: "POST", headers: authHeaders(), body: JSON.stringify(data) });
     setShowForm(false);
     fetchTasks();

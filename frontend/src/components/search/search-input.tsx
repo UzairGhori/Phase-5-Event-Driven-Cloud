@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 export default function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [local, setLocal] = useState(value);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => setLocal(value), [value]);
 
