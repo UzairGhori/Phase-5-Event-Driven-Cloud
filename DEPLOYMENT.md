@@ -393,6 +393,225 @@ Create two environments in repository settings:
 
 ---
 
+## Option 5: Oracle Cloud Free Tier (Docker on ARM VM)
+
+**Cost: $0 forever** (Always Free Tier — no credit card charge)
+
+This option runs all services as individual Docker containers on a single Oracle Cloud ARM A1 VM (4 OCPUs, 24GB RAM). No Kubernetes, no Kafka, no Dapr — just Docker with an Nginx reverse proxy.
+
+### Prerequisites
+
+| Tool | Required For |
+|------|-------------|
+| OCI Account | cloud.oracle.com (Always Free) |
+| SSH Key Pair | VM access |
+| rsync | File upload (pre-installed on most systems) |
+
+### Step 1: Create the VM (OCI Console)
+
+1. Sign in at [cloud.oracle.com](https://cloud.oracle.com)
+2. Navigate to **Compute → Instances → Create Instance**
+3. Configure:
+   - **Name**: `todo-app`
+   - **Image**: Ubuntu 22.04 (or Oracle Linux 9)
+   - **Shape**: `VM.Standard.A1.Flex` — 4 OCPU, 24 GB RAM
+   - **Boot Volume**: 50 GB (free tier allows up to 200 GB total)
+   - **Networking**: Create new VCN or use existing, assign **public IP**
+   - **SSH Key**: Upload your public key (`~/.ssh/id_rsa.pub`)
+4. Click **Create**
+
+### Step 2: Open Firewall Ports (OCI Security List)
+
+1. Go to **Networking → Virtual Cloud Networks → your VCN**
+2. Click the **Default Security List**
+3. Add **Ingress Rules**:
+
+| Source CIDR | Protocol | Dest Port | Description |
+|-------------|----------|-----------|-------------|
+| 0.0.0.0/0 | TCP | 80 | HTTP |
+| 0.0.0.0/0 | TCP | 443 | HTTPS |
+
+### Step 3: Deploy
+
+```bash
+# Automated deployment (builds + deploys everything)
+bash scripts/deploy-oracle.sh <VM_PUBLIC_IP> [~/.ssh/your_key] [ubuntu]
+
+# Example:
+bash scripts/deploy-oracle.sh 129.153.42.100 ~/.ssh/oracle_key ubuntu
+```
+
+The script will:
+1. Validate SSH connectivity
+2. Install Docker on the VM
+3. Upload project files via rsync
+4. Generate production `.env` with random secrets
+5. Build all 7 Docker images on the VM
+6. Start 9 containers (postgres + 6 services + frontend + nginx)
+7. Configure OS firewall
+8. Run health checks
+
+### Manual Deployment (if preferred)
+
+```bash
+# SSH into the VM
+ssh -i ~/.ssh/oracle_key ubuntu@<PUBLIC_IP>
+
+# Clone the project
+git clone https://github.com/YOUR_USER/YOUR_REPO.git /opt/todo-app
+cd /opt/todo-app
+
+# Set environment variables
+export POSTGRES_PASSWORD=$(openssl rand -hex 16)
+export SECRET_KEY=$(openssl rand -hex 32)
+
+# Make scripts executable and start
+chmod +x scripts/oracle/*.sh
+bash scripts/oracle/start-all.sh
+```
+
+### Managing Services
+
+```bash
+# Check status of all containers
+bash scripts/oracle/status.sh
+
+# Stop all services
+bash scripts/oracle/stop-all.sh
+
+# Restart a single service
+bash scripts/oracle/run-task-api.sh
+
+# View logs
+docker logs todo-task-api
+docker logs todo-frontend
+
+# Full teardown (including data)
+REMOVE_NETWORK=true REMOVE_VOLUMES=true bash scripts/oracle/stop-all.sh
+```
+
+### Access
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://\<PUBLIC_IP\> |
+| Task API | http://\<PUBLIC_IP\>/api/health |
+| Chat API | http://\<PUBLIC_IP\>/api/chat |
+
+### Architecture (on the VM)
+
+```
+Internet → :80 Nginx
+              ├── /           → frontend:3000
+              ├── /api/*      → task-api:8000
+              ├── /api/chat/* → chat-api:8001
+              └── /ws         → ws-sync:8005 (WebSocket)
+
+PostgreSQL :5432 ← task-api, audit-service
+```
+
+### Resource Usage (~2.5 GB RAM total)
+
+| Container | RAM (approx) |
+|-----------|-------------|
+| PostgreSQL | ~200 MB |
+| task-api | ~150 MB |
+| chat-api | ~100 MB |
+| reminder | ~100 MB |
+| recurring | ~100 MB |
+| audit | ~100 MB |
+| ws-sync | ~100 MB |
+| frontend | ~200 MB |
+| nginx | ~10 MB |
+| **Total** | **~1 GB** of 24 GB available |
+
+### Teardown
+
+```bash
+# Stop services (keep data)
+bash scripts/oracle/stop-all.sh
+
+# Full cleanup (remove data volume)
+REMOVE_VOLUMES=true REMOVE_NETWORK=true bash scripts/oracle/stop-all.sh
+
+# Delete VM from OCI Console:
+# Compute → Instances → todo-app → Terminate
+```
+
+---
+
+## Option 6: Vercel + Neon (Serverless — Free)
+
+**Cost: $0** — Vercel free tier + Neon free tier PostgreSQL.
+
+This deploys the **backend** as a Vercel Python serverless function and the **frontend** as a standard Vercel Next.js app, with **Neon** providing a free PostgreSQL database.
+
+### Step 1: Create Neon Database (Free)
+
+1. Sign up at [neon.tech](https://neon.tech)
+2. Create a new project → choose a region close to you
+3. Copy the **connection string** — it looks like:
+   ```
+   postgresql://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+   ```
+
+### Step 2: Deploy Backend API (Vercel)
+
+1. Go to [vercel.com](https://vercel.com) → Sign up / Log in with GitHub
+2. Click **"Add New Project"** → Import your repository
+3. Configure the project:
+   - **Root Directory**: `.` (project root)
+   - **Framework Preset**: Other
+4. Add **Environment Variables**:
+
+   | Variable | Value |
+   |----------|-------|
+   | `DATABASE_URL` | Your Neon connection string |
+   | `SECRET_KEY` | A random string (`openssl rand -hex 32`) |
+   | `CORS_ORIGINS` | `["*"]` (update with frontend URL later) |
+
+5. Click **Deploy**
+6. Copy the backend URL (e.g. `https://todo-api-xxx.vercel.app`)
+
+### Step 3: Deploy Frontend (Vercel)
+
+1. Click **"Add New Project"** again → Import the same repository
+2. Configure:
+   - **Root Directory**: `frontend`
+   - **Framework Preset**: Next.js
+3. Add **Environment Variables**:
+
+   | Variable | Value |
+   |----------|-------|
+   | `BACKEND_URL` | Your backend Vercel URL (e.g. `https://todo-api-xxx.vercel.app`) |
+
+4. Click **Deploy**
+5. Your frontend is live at `https://todo-frontend-xxx.vercel.app`
+
+### Step 4: Update CORS
+
+Go back to the **backend project** settings on Vercel:
+- Update `CORS_ORIGINS` to: `["https://todo-frontend-xxx.vercel.app"]`
+- Redeploy
+
+### Access
+
+| Service | URL |
+|---------|-----|
+| Frontend | `https://todo-frontend-xxx.vercel.app` |
+| Backend API | `https://todo-api-xxx.vercel.app/api/health` |
+| Database | Neon dashboard at neon.tech |
+
+### Limitations (Free Tier)
+
+- Vercel Python functions: 10s timeout, 250MB bundle size
+- Neon free: 0.5 GB storage, auto-suspend after 5 min inactivity
+- No WebSocket support (ws-sync service not available)
+- No Kafka/Dapr event processing (consumer services not deployed)
+- Core CRUD (tasks, tags, auth) works fully
+
+---
+
 ## Troubleshooting
 
 ### Pods Not Starting
@@ -429,6 +648,29 @@ kubectl exec -it -n todo-app deploy/postgresql -- psql -U postgres -d todo_app
 
 # Check Dapr state store
 dapr components -k -n todo-app | grep statestore
+```
+
+### Docker Issues (Oracle Cloud / Docker deployment)
+
+```bash
+# Check all container status
+bash scripts/oracle/status.sh
+
+# View container logs
+docker logs todo-task-api --tail 100
+docker logs todo-frontend --tail 100
+
+# Restart a specific service
+bash scripts/oracle/run-task-api.sh
+
+# Restart everything
+bash scripts/oracle/stop-all.sh && bash scripts/oracle/start-all.sh
+
+# Check if port 80 is accessible
+curl http://localhost/nginx-health
+
+# Connect to PostgreSQL
+docker exec -it todo-postgres psql -U postgres -d todo_app
 ```
 
 ### Monitoring Issues
