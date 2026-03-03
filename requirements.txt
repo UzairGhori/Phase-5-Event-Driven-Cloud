@@ -1,0 +1,25 @@
+# Root requirements.txt for Vercel Python serverless deployment
+# Mirrors backend/requirements.txt minus heavy OTel/gRPC packages
+
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# ORM & Database
+sqlmodel>=0.0.22
+psycopg2-binary>=2.9.9
+
+# Settings
+pydantic-settings>=2.5.0
+python-dotenv>=1.0.1
+
+# Auth
+PyJWT>=2.9.0
+passlib[bcrypt]>=1.7.4
+
+# HTTP client
+httpx>=0.27.0
+
+# Monitoring (lightweight)
+prometheus-client>=0.21.0
+python-json-logger>=2.0.7

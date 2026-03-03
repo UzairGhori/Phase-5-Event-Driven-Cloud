@@ -1,17 +1,24 @@
 # T-G004 — OpenTelemetry tracing instrumentation
 import os
 
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+try:
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+    _OTEL_AVAILABLE = True
+except ImportError:
+    _OTEL_AVAILABLE = False
 
 
 def setup_tracing(service_name: str, app=None):
     """Initialize OpenTelemetry with OTLP exporter to OTel Collector."""
+    if not _OTEL_AVAILABLE or os.getenv("OTEL_SDK_DISABLED"):
+        return
     endpoint = os.getenv(
         "OTEL_EXPORTER_OTLP_ENDPOINT",
         "http://otel-collector.monitoring.svc.cluster.local:4317",

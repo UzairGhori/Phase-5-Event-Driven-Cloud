@@ -1,4 +1,6 @@
 # Vercel Serverless entry point for the FastAPI backend
-# This file wraps the existing FastAPI app for Vercel's Python runtime
+import os
 
-from backend.app.main import app  # noqa: F401
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+
+from backend.app.main import app  # noqa: E402, F401
